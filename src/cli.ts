@@ -12,7 +12,7 @@ type ParsedArgs = {
 };
 
 function usage(): string {
-  return `EAC ${VERSION}\n\nEverything-as-Code repo contract compiler.\n\nUsage:\n  eac init [--dry-run] [--force] [--json]\n  eac doctor [--json]\n  eac check [--json]\n  eac --version\n  eac help\n\nCurrent release includes the real kernel contracts, agents/context adapter, and semver enforcement adapter.\n`;
+  return `EAC ${VERSION}\n\nEverything-as-Code repo contract compiler.\n\nUsage:\n  eac init [--dry-run] [--force] [--json]\n  eac doctor [--json]\n  eac check [--json]\n  eac --version\n  eac help\n\nCurrent release includes the kernel graph/artifact registry, agents/context, product/manifest, cucumber/bdd, and versioning/semver adapters.\n`;
 }
 
 function parseArgs(argv: string[]): ParsedArgs {

@@ -38,6 +38,9 @@ export type EacConfig = {
   adapters?: AdapterSelection[];
   waivers?: Waiver[];
   agents?: unknown;
+  product?: unknown;
+  cucumber?: unknown;
+  bdd?: unknown;
   versioning?: unknown;
 };
 
@@ -52,6 +55,34 @@ export type Artifact = {
   kind: string;
   source: string;
   required?: boolean;
+};
+
+export type GraphNode = {
+  id: string;
+  kind: string;
+  label?: string;
+  path?: string;
+  source: string;
+  data?: Record<string, unknown>;
+};
+
+export type GraphEdge = {
+  from: string;
+  to: string;
+  kind: string;
+  source: string;
+  data?: Record<string, unknown>;
+};
+
+export type GraphContribution = {
+  nodes?: GraphNode[];
+  edges?: GraphEdge[];
+};
+
+export type RepoGraph = {
+  artifacts: Artifact[];
+  nodes: GraphNode[];
+  edges: GraphEdge[];
 };
 
 export type InitAction = {
@@ -76,6 +107,7 @@ export type Adapter = {
   id: string;
   description: string;
   artifacts?(ctx: RepoContext): Artifact[] | Promise<Artifact[]>;
+  graph?(ctx: RepoContext): GraphContribution | Promise<GraphContribution>;
   init?(ctx: RepoContext): InitAction[] | Promise<InitAction[]>;
   rules?(ctx: RepoContext): Rule[] | Promise<Rule[]>;
   doctor?(ctx: RepoContext): Diagnostic[] | Promise<Diagnostic[]>;
@@ -93,6 +125,7 @@ export type RepoContext = {
   mode: CommandMode;
   configPath?: string;
   config: EacConfig;
+  graph: RepoGraph;
   adapterOptions<T = unknown>(adapterId: string): T | undefined;
   resolve(path: string): string;
   fs: EacFileSystem;

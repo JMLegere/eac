@@ -47,6 +47,8 @@ export function adapterOptions<T = unknown>(config: EacConfig, adapterId: string
   }
 
   if (adapterId === "agents/context") return config.agents as T | undefined;
+  if (adapterId === "product/manifest") return config.product as T | undefined;
+  if (adapterId === "cucumber/bdd") return (config.cucumber ?? config.bdd) as T | undefined;
   if (adapterId === "versioning/semver") return config.versioning as T | undefined;
 
   return undefined;
