@@ -41,7 +41,6 @@ export type EacConfig = {
   product?: unknown;
   cucumber?: unknown;
   bdd?: unknown;
-  versioning?: unknown;
 };
 
 export type LoadedConfig = {

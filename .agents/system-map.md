@@ -34,10 +34,6 @@ cucumber/bdd
   -> parses @capability.<id> and @action.<id> tags
   -> links feature/scenario graph nodes to product graph nodes
   -> checks feature ownership and BDD action coverage
-
-versioning/semver
-  -> checks package.json strict SemVer
-  -> checks release tag/version alignment in tag contexts
 ```
 
 Current dogfood traceability path:

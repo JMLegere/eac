@@ -15,7 +15,7 @@ export type {
   Severity,
   Waiver,
 } from "./core/types";
-export { agentsContextAdapter, cucumberBddAdapter, productManifestAdapter, versioningSemverAdapter } from "./adapters";
+export { agentsContextAdapter, cucumberBddAdapter, productManifestAdapter } from "./adapters";
 export type { CucumberBddOptions } from "./adapters/cucumber-bdd";
 export type {
   ProductAction,

@@ -2,7 +2,7 @@ export default {
   project: {
     name: "eac",
   },
-  adapters: ["agents/context", "product/manifest", "cucumber/bdd", "versioning/semver"],
+  adapters: ["agents/context", "product/manifest", "cucumber/bdd"],
   agents: {
     instructionFiles: [],
     minimumMeaningfulCharacters: 80,
@@ -15,10 +15,6 @@ export default {
   cucumber: {
     features: ["features/**/*.feature"],
     enforceFeatureInventory: true,
-  },
-  versioning: {
-    packageJson: "package.json",
-    tagPrefix: "v",
   },
   waivers: [],
 };

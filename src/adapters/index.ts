@@ -2,13 +2,11 @@ import type { Adapter, AdapterSelection } from "../core/types";
 import { agentsContextAdapter } from "./agents-context";
 import { cucumberBddAdapter } from "./cucumber-bdd";
 import { productManifestAdapter } from "./product-manifest";
-import { versioningSemverAdapter } from "./versioning-semver";
 
 const BUILT_IN_ADAPTERS = new Map<string, Adapter>([
   [agentsContextAdapter.id, agentsContextAdapter],
   [productManifestAdapter.id, productManifestAdapter],
   [cucumberBddAdapter.id, cucumberBddAdapter],
-  [versioningSemverAdapter.id, versioningSemverAdapter],
 ]);
 
 export function resolveAdapters(selections: AdapterSelection[] | undefined): Adapter[] {
@@ -24,4 +22,4 @@ export function resolveAdapters(selections: AdapterSelection[] | undefined): Ada
   });
 }
 
-export { agentsContextAdapter, cucumberBddAdapter, productManifestAdapter, versioningSemverAdapter };
+export { agentsContextAdapter, cucumberBddAdapter, productManifestAdapter };

@@ -53,3 +53,11 @@ The adapter validates stable IDs, action verification obligations, action/capabi
 - actions requiring `bdd` must have scenario coverage
 - each capability's required actions must be covered by one of its declared feature files
 - orphan feature files are strict by default when feature inventory enforcement is enabled
+
+## 2026-05-10 — SemVer is release hygiene, not an EAC adapter
+
+Do not ship `versioning/semver` as a built-in EAC adapter.
+
+Rationale: EAC adapters should model repo contracts that help humans, agents, and CI understand product/project truth. Package version/tag consistency is release-process hygiene for EAC itself, not a reusable Everything-as-Code contract module in the standard tool.
+
+Keep strict package-version checks in release packaging scripts where useful, but outside the adapter registry and public adapter surface.
