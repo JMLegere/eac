@@ -305,7 +305,7 @@ export async function loadProductModel(
   };
 }
 
-async function collectProductDiagnostics(ctx: RepoContext, severity: Severity): Promise<Diagnostic[]> {
+export async function collectProductDiagnostics(ctx: RepoContext, severity: Severity): Promise<Diagnostic[]> {
   const result = await loadProductModel(ctx, severity);
   const diagnostics = [...result.diagnostics];
   if (!result.model) return diagnostics;

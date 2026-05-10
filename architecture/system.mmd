@@ -1,0 +1,16 @@
+flowchart TD
+  Config["eac.config.ts"] --> Loader["Config loader"]
+  Loader --> Registry["Adapter registry"]
+  Registry --> Artifacts["Artifact registry"]
+  Registry --> Graph["Repo graph"]
+  Registry --> Rules["Rule engine"]
+  Rules --> Diagnostics["Diagnostics"]
+  Diagnostics --> Waivers["Waiver filter"]
+  Waivers --> Reporter["CLI reporter"]
+
+  ProductSuperBdd["product/superbdd"] --> Registry
+  ArchitectureMermaid["architecture/mermaid"] --> Registry
+  DesignReact["design/react"] --> Registry
+  DataSupabase["data/supabase"] --> Registry
+  InfraTerraform["infra/terraform"] --> Registry
+  DeployCloudflare["deploy/cloudflare"] --> Registry

@@ -49,6 +49,11 @@ export function adapterOptions<T = unknown>(config: EacConfig, adapterId: string
   if (adapterId === "agents/context") return config.agents as T | undefined;
   if (adapterId === "product/manifest") return config.product as T | undefined;
   if (adapterId === "cucumber/bdd") return (config.cucumber ?? config.bdd) as T | undefined;
+  if (adapterId === "architecture/mermaid") return config.architecture as T | undefined;
+  if (adapterId === "design/react") return config.design as T | undefined;
+  if (adapterId === "data/supabase") return config.data as T | undefined;
+  if (adapterId === "infra/terraform") return config.infra as T | undefined;
+  if (adapterId === "deploy/cloudflare") return config.deploy as T | undefined;
 
   return undefined;
 }

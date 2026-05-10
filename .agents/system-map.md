@@ -72,3 +72,27 @@ TypeScript source
       -> mise github backend
         -> eac on PATH
 ```
+
+Implemented public adapter set seeded by `../main-website`:
+
+```text
+product/superbdd
+  -> compiles Capability -> Feature -> Scenario -> Step -> Action evidence
+
+architecture/mermaid
+  -> discovers and parses Mermaid source diagrams
+
+design/react
+  -> validates React design-system artifacts, registry, and usage boundaries
+
+data/supabase
+  -> validates static Supabase runtime/data contract artifacts
+
+infra/terraform
+  -> validates static Terraform source truth and ownership boundaries
+
+deploy/cloudflare
+  -> validates static Wrangler runtime deployment contract evidence
+```
+
+All six adapters are generalized through configurable paths/options. `../main-website` is the seed validation repo, not the adapter boundary.

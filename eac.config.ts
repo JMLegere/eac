@@ -2,7 +2,7 @@ export default {
   project: {
     name: "eac",
   },
-  adapters: ["agents/context", "product/manifest", "cucumber/bdd"],
+  adapters: ["agents/context", "product/superbdd", "architecture/mermaid"],
   agents: {
     instructionFiles: [],
     minimumMeaningfulCharacters: 80,
@@ -15,6 +15,10 @@ export default {
   cucumber: {
     features: ["features/**/*.feature"],
     enforceFeatureInventory: true,
+  },
+  architecture: {
+    sources: ["architecture/**/*.mmd"],
+    requireSources: true,
   },
   waivers: [],
 };

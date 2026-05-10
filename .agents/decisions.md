@@ -61,3 +61,18 @@ Do not ship `versioning/semver` as a built-in EAC adapter.
 Rationale: EAC adapters should model repo contracts that help humans, agents, and CI understand product/project truth. Package version/tag consistency is release-process hygiene for EAC itself, not a reusable Everything-as-Code contract module in the standard tool.
 
 Keep strict package-version checks in release packaging scripts where useful, but outside the adapter registry and public adapter surface.
+
+## 2026-05-10 — Main-website adapter set generalizes provider contracts
+
+Use the following public adapter set for the `../main-website` seed validation path:
+
+- `product/superbdd`
+- `architecture/mermaid`
+- `design/react`
+- `data/supabase`
+- `infra/terraform`
+- `deploy/cloudflare`
+
+These are public contract adapters, not main-website-specific scripts. Internal/provider evidence stays behind the public adapter seam; all adapters should accept configurable paths/options with sensible defaults. `../main-website` is seed evidence for validation, not the adapter boundary.
+
+Environment checks are internal rule groups under provider adapters. GitHub Actions remains activation wiring, not a public adapter.

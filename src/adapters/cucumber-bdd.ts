@@ -31,7 +31,7 @@ export type CucumberBddOptions = {
   enforceFeatureInventory?: boolean;
 };
 
-type ParsedFeatureDocument = {
+export type ParsedFeatureDocument = {
   relativePath: string;
   featureName?: string;
   featureLine?: number;
@@ -41,15 +41,22 @@ type ParsedFeatureDocument = {
   parseDiagnostics: Diagnostic[];
 };
 
-type ParsedScenario = {
+export type ParsedScenario = {
   keyword: "Scenario" | "Scenario Outline";
   name: string;
   line: number;
   actionTags: Set<string>;
   tags: Set<string>;
+  steps: ParsedStep[];
 };
 
-type BddLoadResult = {
+export type ParsedStep = {
+  keyword: "Given" | "When" | "Then" | "And" | "But" | "*";
+  text: string;
+  line: number;
+};
+
+export type BddLoadResult = {
   product?: ProductModel;
   documents: ParsedFeatureDocument[];
   diagnostics: Diagnostic[];
@@ -116,19 +123,32 @@ export const cucumberBddAdapter: Adapter = {
           actionTags: [...document.actionTags],
         },
       },
-      ...document.scenarios.map((scenario) => ({
-        id: scenarioNodeId(document.relativePath, scenario.line),
-        kind: "scenario",
-        label: scenario.name,
-        path: document.relativePath,
-        source: cucumberBddAdapter.id,
-        data: {
-          line: scenario.line,
-          keyword: scenario.keyword,
-          actionTags: [...scenario.actionTags],
-          tags: [...scenario.tags],
+      ...document.scenarios.flatMap((scenario) => [
+        {
+          id: scenarioNodeId(document.relativePath, scenario.line),
+          kind: "scenario",
+          label: scenario.name,
+          path: document.relativePath,
+          source: cucumberBddAdapter.id,
+          data: {
+            line: scenario.line,
+            keyword: scenario.keyword,
+            actionTags: [...scenario.actionTags],
+            tags: [...scenario.tags],
+          },
         },
-      })),
+        ...scenario.steps.map((step) => ({
+          id: stepNodeId(document.relativePath, step.line),
+          kind: "step",
+          label: step.text,
+          path: document.relativePath,
+          source: cucumberBddAdapter.id,
+          data: {
+            line: step.line,
+            keyword: step.keyword,
+          },
+        })),
+      ]),
     ]);
 
     const edges = loaded.documents.flatMap((document) => [
@@ -151,6 +171,12 @@ export const cucumberBddAdapter: Adapter = {
           kind: "owns",
           source: cucumberBddAdapter.id,
         },
+        ...scenario.steps.map((step) => ({
+          from: scenarioNodeId(document.relativePath, scenario.line),
+          to: stepNodeId(document.relativePath, step.line),
+          kind: "owns-step",
+          source: cucumberBddAdapter.id,
+        })),
         ...[...scenario.actionTags].map((actionId) => ({
           from: scenarioNodeId(document.relativePath, scenario.line),
           to: actionNodeId(actionId),
@@ -181,7 +207,7 @@ export const cucumberBddAdapter: Adapter = {
   },
 };
 
-async function collectBddDiagnostics(ctx: RepoContext, severity: Severity): Promise<Diagnostic[]> {
+export async function collectBddDiagnostics(ctx: RepoContext, severity: Severity): Promise<Diagnostic[]> {
   const loaded = await loadBdd(ctx, severity);
   const diagnostics = [...loaded.diagnostics];
 
@@ -191,7 +217,7 @@ async function collectBddDiagnostics(ctx: RepoContext, severity: Severity): Prom
   return diagnostics;
 }
 
-async function loadBdd(ctx: RepoContext, severity: Severity): Promise<BddLoadResult> {
+export async function loadBdd(ctx: RepoContext, severity: Severity): Promise<BddLoadResult> {
   const product = await loadProductModel(ctx, severity);
   const diagnostics = product.model ? [] : product.diagnostics;
   const productPaths = product.model ? productFeaturePaths(product.model.capabilities) : [];
@@ -363,6 +389,7 @@ function parseFeatureDocument(relativePath: string, source: string, severity: Se
   let featureName: string | undefined;
   let featureLine: number | undefined;
 
+  let currentScenario: ParsedScenario | undefined;
   for (const [index, rawLine] of lines.entries()) {
     const lineNumber = index + 1;
     const line = rawLine.trim();
@@ -397,14 +424,27 @@ function parseFeatureDocument(relativePath: string, source: string, severity: Se
         const actionMatch = ACTION_TAG.exec(tag);
         if (actionMatch) scenarioActionTags.add(actionMatch[1]);
       }
-      scenarios.push({
+      const scenario: ParsedScenario = {
         keyword: scenarioMatch[1] as "Scenario" | "Scenario Outline",
         name: scenarioMatch[2].trim(),
         line: lineNumber,
         actionTags: scenarioActionTags,
         tags: pendingTags,
-      });
+        steps: [],
+      };
+      scenarios.push(scenario);
+      currentScenario = scenario;
       pendingTags = new Set();
+      continue;
+    }
+
+    const stepMatch = /^(Given|When|Then|And|But|\*)\s+(.+)$/.exec(line);
+    if (stepMatch && currentScenario) {
+      currentScenario.steps.push({
+        keyword: stepMatch[1] as ParsedStep["keyword"],
+        text: stepMatch[2].trim(),
+        line: lineNumber,
+      });
     }
   }
 
@@ -547,10 +587,14 @@ function sentenceCase(value: string): string {
   return value.replace(/-/g, " ").replace(/^./, (char) => char.toUpperCase());
 }
 
-function featureNodeId(path: string): string {
+export function featureNodeId(path: string): string {
   return `feature:${path}`;
 }
 
-function scenarioNodeId(path: string, line: number): string {
+export function scenarioNodeId(path: string, line: number): string {
   return `scenario:${path}:${line}`;
 }
+
+export function stepNodeId(path: string, line: number): string {
+  return `step:${path}:${line}`;
+} 

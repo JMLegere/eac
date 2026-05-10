@@ -19,6 +19,20 @@ const config = `export default {
 };
 `;
 
+const superBddConfig = `export default {
+  adapters: ["product/superbdd"],
+  product: {
+    manifest: "eac.model.ts",
+    requireBddForAllActions: true,
+    requireUnitForMutations: true,
+  },
+  cucumber: {
+    features: ["features/**/*.feature"],
+    enforceFeatureInventory: true,
+  },
+};
+`;
+
 const validManifest = `export const actionCapabilities = {
   runCheck: {
     id: "run-check",
@@ -88,6 +102,42 @@ describe("product/manifest and cucumber/bdd adapters", () => {
     expect(result.graph.edges.some((edge) => edge.kind === "verifies" && edge.to === "action:write-files")).toBe(true);
   });
 
+  test("product/superbdd compiles capability feature scenario step action spine", async () => {
+    const root = await fixture({ manifest: validManifest, feature: validFeature, configContent: superBddConfig });
+
+    const result = await runCheck({ root });
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.graph.nodes.some((node) => node.kind === "step" && node.path === "features/repo-contract.feature")).toBe(
+      true,
+    );
+    expect(result.graph.edges.some((edge) => edge.kind === "owns-feature" && edge.from === "capability:repo-contract")).toBe(
+      true,
+    );
+    expect(result.graph.edges.some((edge) => edge.kind === "evidences-action" && edge.to === "action:run-check")).toBe(
+      true,
+    );
+  });
+
+  test("product/superbdd requires action scenarios to contain executable steps", async () => {
+    const root = await fixture({
+      manifest: validManifest,
+      configContent: superBddConfig,
+      feature: `@capability.repo-contract
+Feature: Repository contract
+
+  @action.run-check
+  Scenario: Run strict check
+`,
+    });
+
+    const result = await runCheck({ root });
+
+    expect(result.diagnostics.map((diagnostic) => diagnostic.ruleId)).toContain(
+      "product/superbdd-action-step-required",
+    );
+  });
+
   test("missing action tag fails BDD action coverage", async () => {
     const root = await fixture({
       manifest: validManifest,
@@ -135,9 +185,17 @@ Feature: Repository contract
   });
 });
 
-async function fixture({ manifest, feature }: { manifest: string; feature: string }): Promise<string> {
+async function fixture({
+  manifest,
+  feature,
+  configContent = config,
+}: {
+  manifest: string;
+  feature: string;
+  configContent?: string;
+}): Promise<string> {
   const root = tempRoot();
-  write(join(root, "eac.config.ts"), config);
+  write(join(root, "eac.config.ts"), configContent);
   write(join(root, "eac.model.ts"), manifest);
   await mkdir(join(root, "features"), { recursive: true });
   write(join(root, "features", "repo-contract.feature"), feature);
