@@ -1,14 +1,17 @@
 {
   "name": "eac",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "bin": {
     "eac": "./dist/eac"
   },
   "scripts": {
+    "check": "bun src/cli.ts check",
+    "doctor": "bun src/cli.ts doctor",
     "build": "bun build src/cli.ts --compile --outfile dist/eac",
-    "package:release": "bun run build && node scripts/package-release.mjs"
+    "package:release": "bun run check && bun run build && node scripts/package-release.mjs",
+    "verify": "bun run check && bun run build"
   },
   "engines": {
     "bun": ">=1.3.0"

@@ -4,7 +4,13 @@ import { basename, join } from "node:path";
 import { execFileSync } from "node:child_process";
 import pkg from "../package.json" with { type: "json" };
 
+const STRICT_SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
+
 const version = pkg.version;
+
+if (!STRICT_SEMVER.test(version)) {
+  throw new Error(`package.json version is not strict SemVer: ${version}`);
+}
 const platform = process.platform === "darwin" ? "macos" : process.platform;
 const arch = process.arch === "x64" ? "x64" : process.arch;
 const releaseDir = join(process.cwd(), "release");
