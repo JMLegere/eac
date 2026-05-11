@@ -1,24 +1,17 @@
 export default {
-  project: {
-    name: "eac",
+  "adapters": [
+    "product/superbdd"
+  ],
+  "product": {
+    "manifest": "product/manifest.ts",
+    "requireBddForAllActions": true,
+    "requireUnitForMutations": true
   },
-  adapters: ["agents/context", "product/superbdd", "architecture/mermaid"],
-  agents: {
-    instructionFiles: [],
-    minimumMeaningfulCharacters: 80,
+  "cucumber": {
+    "features": [
+      "features/**/*.feature"
+    ],
+    "enforceFeatureInventory": true
   },
-  product: {
-    manifest: "eac.model.ts",
-    requireBddForAllActions: true,
-    requireUnitForMutations: true,
-  },
-  cucumber: {
-    features: ["features/**/*.feature"],
-    enforceFeatureInventory: true,
-  },
-  architecture: {
-    sources: ["architecture/**/*.mmd"],
-    requireSources: true,
-  },
-  waivers: [],
+  "waivers": []
 };

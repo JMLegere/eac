@@ -15,40 +15,51 @@ repo root
           -> command reporter
 ```
 
-Enabled dogfood adapters in this repo:
+Installed repo-local dogfood state:
 
 ```text
-agents/context
-  -> declares .agents artifacts
-  -> init creates missing files
-  -> doctor emits advisory diagnostics
-  -> check emits strict diagnostics
-
-product/manifest
-  -> loads eac.model.ts
-  -> declares capability/action/workflow graph nodes
-  -> checks IDs, ownership, references, verification obligations, high-risk mutation model coverage
-
-cucumber/bdd
-  -> discovers features/**/*.feature
-  -> parses @capability.<id> and @action.<id> tags
-  -> links feature/scenario graph nodes to product graph nodes
-  -> checks feature ownership and BDD action coverage
+EAC repo source tree
+  -> eac.config.ts
+    -> adapters: ["product/superbdd"]
+    -> product.manifest: "product/manifest.ts"
+    -> cucumber.features: ["features/**/*.feature"]
+  -> product/manifest.ts
+    -> starter action/capability with eacStarter: true
+  -> features/repo-contract.feature
+    -> starter BDD scenario
+  -> eac check
+    -> fails on product/starter-placeholder until authored
 ```
 
-Current dogfood traceability path:
+Clean SuperBDD onboarding path:
 
 ```text
-eac.model.ts
-  -> productCapabilities.eacKernel
-    -> features/eac-kernel.feature @capability.eac-kernel
-      -> @action.run-init
-      -> @action.run-doctor
-      -> @action.run-check
-        -> bun test
-        -> eac check
-        -> tsc --noEmit
-        -> bun build
+mise use github:JMLegere/eac@latest
+  -> eac binary on PATH
+eac add product/superbdd
+  -> target resolver
+    -> adapters: ["product/superbdd"]
+    -> product.manifest: "product/manifest.ts"
+    -> cucumber.features: ["features/**/*.feature"]
+  -> eac.config.ts
+eac init
+  -> product/manifest.ts
+  -> features/repo-contract.feature
+eac check
+  -> fails on starter placeholders
+  -> passes only after the repo authors real product truth
+```
+
+Repo verification path:
+
+```text
+bun test
+  -> adapter/unit coverage
+  -> clean `eac add product/superbdd` + `eac init` fixture coverage
+tsc --noEmit
+bun src/cli.ts check
+  -> default agents/context check only when no repo config is installed
+bun build src/cli.ts --compile --outfile dist/eac
 ```
 
 Target kernel composition:

@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "types": ["bun-types"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "eac.config.ts", "eac.model.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
 }

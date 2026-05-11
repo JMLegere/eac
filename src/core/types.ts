@@ -97,7 +97,7 @@ export type InitAction = {
 };
 
 export type ResolvedInitAction = InitAction & {
-  action: "create" | "overwrite" | "skip";
+  action: "create" | "overwrite" | "update" | "skip";
 };
 
 export type Rule = {

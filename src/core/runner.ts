@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { resolveAdapters } from "../adapters";
 import { adapterOptions, loadConfig } from "./config";
 import { createFileSystem } from "./fs";
@@ -8,6 +8,8 @@ import type {
   Artifact,
   CommandMode,
   Diagnostic,
+  EacConfig,
+  EacFileSystem,
   GraphContribution,
   GraphEdge,
   GraphNode,
@@ -20,6 +22,8 @@ import type {
   Severity,
 } from "./types";
 
+const DEFAULT_CONFIG_PATH = "eac.config.ts";
+
 export type RunOptions = {
   root?: string;
   json?: boolean;
@@ -30,11 +34,22 @@ export type InitOptions = RunOptions & {
   force?: boolean;
 };
 
+export type AddOptions = RunOptions & {
+  target?: string;
+  targets?: string[];
+  dryRun?: boolean;
+  force?: boolean;
+};
+
 export type InitResult = {
   configPath?: string;
   dryRun: boolean;
   force: boolean;
   actions: ResolvedInitAction[];
+};
+
+export type AddResult = InitResult & {
+  targets: string[];
 };
 
 export type DiagnosticsResult = {
@@ -49,10 +64,7 @@ export async function runInit(options: InitOptions = {}): Promise<InitResult> {
   const actions = resolveInitActions(planned, ctx, Boolean(options.force));
 
   if (!options.dryRun) {
-    for (const action of actions) {
-      if (action.action === "skip") continue;
-      ctx.fs.writeText(action.path, action.content);
-    }
+    writeActions(actions, ctx.fs);
   }
 
   return {
@@ -60,6 +72,33 @@ export async function runInit(options: InitOptions = {}): Promise<InitResult> {
     dryRun: Boolean(options.dryRun),
     force: Boolean(options.force),
     actions,
+  };
+}
+
+export async function runAdd(options: AddOptions): Promise<AddResult> {
+  const root = options.root ?? process.cwd();
+  const requestedTargets = options.targets ?? (options.target ? [options.target] : []);
+  const plan = addPlanForTargets(requestedTargets);
+  const loadedConfig = await loadConfig(root);
+  const fs = createFileSystem(root);
+  const configPath = loadedConfig.path ? normalizeConfigPath(root, loadedConfig.path) : DEFAULT_CONFIG_PATH;
+  const addConfig = loadedConfig.path ? mergeAddConfig(loadedConfig.config, plan.config, plan.adapterIds) : plan.config;
+  const changed = !loadedConfig.path || JSON.stringify(addConfig) !== JSON.stringify(loadedConfig.config);
+  const action: ResolvedInitAction = {
+    ...configInitAction(configPath, addConfig),
+    action: changed ? (fs.exists(configPath) ? "update" : "create") : "skip",
+  };
+
+  if (!options.dryRun) {
+    writeActions([action], fs);
+  }
+
+  return {
+    targets: plan.targets,
+    configPath,
+    dryRun: Boolean(options.dryRun),
+    force: Boolean(options.force),
+    actions: [action],
   };
 }
 
@@ -85,15 +124,27 @@ async function createRuntime(root = process.cwd(), mode: CommandMode): Promise<{
   const loadedConfig = await loadConfig(root);
   const adapters = resolveAdapters(loadedConfig.config.adapters);
   const fs = createFileSystem(root);
+  const ctx = await createContext(root, mode, loadedConfig.path, loadedConfig.config, fs, adapters);
 
+  return { loadedConfig, adapters, ctx };
+}
+
+async function createContext(
+  root: string,
+  mode: CommandMode,
+  configPath: string | undefined,
+  config: EacConfig,
+  fs: EacFileSystem,
+  adapters: Adapter[],
+): Promise<RepoContext> {
   const ctx: RepoContext = {
     root,
     mode,
-    configPath: loadedConfig.path,
-    config: loadedConfig.config,
+    configPath,
+    config,
     graph: emptyGraph(),
     adapterOptions<T = unknown>(adapterId: string): T | undefined {
-      return adapterOptions<T>(loadedConfig.config, adapterId);
+      return adapterOptions<T>(config, adapterId);
     },
     resolve(path: string): string {
       return join(root, path);
@@ -102,8 +153,167 @@ async function createRuntime(root = process.cwd(), mode: CommandMode): Promise<{
   };
 
   ctx.graph = await collectGraph(adapters, ctx);
+  return ctx;
+}
 
-  return { loadedConfig, adapters, ctx };
+function addPlanForTargets(targets: string[]): { targets: string[]; adapterIds: string[]; config: EacConfig } {
+  if (targets.length === 0) throw new Error("Missing EAC add target");
+
+  const plans = targets.map(addPlanForTarget);
+  const adapterIds = unique(plans.map((plan) => plan.adapterId));
+  const config = plans.reduce<EacConfig>(
+    (acc, plan) => mergeAddConfig(acc, plan.config, [plan.adapterId]),
+    { adapters: [], waivers: [] },
+  );
+
+  return { targets: unique(plans.map((plan) => plan.target)), adapterIds, config };
+}
+
+function addPlanForTarget(target: string): { target: string; adapterId: string; config: EacConfig } {
+  if (target === "product/superbdd") {
+    return addPlan(target, "product/superbdd", {
+      product: {
+        manifest: "product/manifest.ts",
+        requireBddForAllActions: true,
+        requireUnitForMutations: true,
+      },
+      cucumber: {
+        features: ["features/**/*.feature"],
+        enforceFeatureInventory: true,
+      },
+    });
+  }
+
+  if (target === "architecture/mermaid") {
+    return addPlan(target, "architecture/mermaid", {
+      architecture: {
+        sources: ["architecture/**/*.mmd"],
+        requireSources: true,
+      },
+    });
+  }
+
+  if (target === "design/react") {
+    return addPlan(target, "design/react", {
+      design: {
+        srcDir: "src",
+        designDir: "src/design",
+        tokenSource: "tokens/source/core.json",
+        generatedTokenCss: "src/styles/generated/tokens.css",
+        appCss: "src/styles/app.css",
+      },
+    });
+  }
+
+  if (target === "data/supabase") {
+    return addPlan(target, "data/supabase", {
+      data: {
+        envExample: ".env.example",
+        runtimeEnvSource: "src/env.ts",
+        adapterDir: "src/adapters/supabase",
+        adapterIndex: "src/adapters/supabase/index.ts",
+        clientSource: "src/adapters/supabase/client.ts",
+        databaseTypes: "src/adapters/supabase/database.types.ts",
+        containerSource: "src/application/container.ts",
+        serverRuntimeSource: "src/worker.ts",
+        supabaseConfig: "supabase/config.toml",
+        migrationsDir: "supabase/migrations",
+        packageJson: "package.json",
+      },
+    });
+  }
+
+  if (target === "infra/terraform") {
+    return addPlan(target, "infra/terraform", {
+      infra: {
+        terraformDir: "infra/terraform",
+        tfvarsExample: "infra/terraform/terraform.tfvars.example",
+        packageJson: "package.json",
+      },
+    });
+  }
+
+  if (target === "deploy/cloudflare") {
+    return addPlan(target, "deploy/cloudflare", {
+      deploy: {
+        wranglerConfig: "wrangler.jsonc",
+        packageJson: "package.json",
+        envExample: ".env.example",
+        deployScript: "scripts/deploy-cloudflare.sh",
+      },
+    });
+  }
+
+  throw new Error(`Unknown EAC add target: ${target}`);
+}
+
+function addPlan(target: string, adapterId: string, config: EacConfig): { target: string; adapterId: string; config: EacConfig } {
+  return {
+    target,
+    adapterId,
+    config: {
+      ...config,
+      adapters: [adapterId],
+      waivers: [],
+    },
+  };
+}
+
+function mergeAddConfig(config: EacConfig, defaults: EacConfig, adapterIds: string[]): EacConfig {
+  const adapters = [...(config.adapters ?? [])];
+  for (const adapterId of adapterIds) {
+    if (!adapters.some((selection) => (typeof selection === "string" ? selection : selection.use) === adapterId)) {
+      adapters.push(adapterId);
+    }
+  }
+
+  return {
+    ...config,
+    adapters,
+    product: mergeOptions(defaults.product, config.product),
+    cucumber: mergeOptions(defaults.cucumber, config.cucumber),
+    architecture: mergeOptions(defaults.architecture, config.architecture),
+    design: mergeOptions(defaults.design, config.design),
+    data: mergeOptions(defaults.data, config.data),
+    infra: mergeOptions(defaults.infra, config.infra),
+    deploy: mergeOptions(defaults.deploy, config.deploy),
+    waivers: config.waivers ?? [],
+  };
+}
+
+function mergeOptions(defaults: unknown, configured: unknown): unknown {
+  if (!isRecord(defaults)) return configured ?? defaults;
+  if (!isRecord(configured)) return defaults;
+  return { ...defaults, ...configured };
+}
+
+function configInitAction(path: string, config: EacConfig): InitAction {
+  return {
+    path,
+    content: `export default ${JSON.stringify(config, null, 2)};\n`,
+    source: "eac/add",
+    description: "EAC adapter configuration.",
+  };
+}
+
+function normalizeConfigPath(root: string, configPath: string): string {
+  const relativePath = relative(root, configPath);
+  return relativePath && !relativePath.startsWith("..") ? relativePath : DEFAULT_CONFIG_PATH;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function writeActions(actions: ResolvedInitAction[], fs: EacFileSystem): void {
+  for (const action of actions) {
+    if (action.action === "skip") continue;
+    fs.writeText(action.path, action.content);
+  }
+}
+
+function unique<T>(items: T[]): T[] {
+  return [...new Set(items)];
 }
 
 async function collectInitActions(adapters: Adapter[], ctx: RepoContext): Promise<InitAction[]> {
@@ -150,7 +360,7 @@ async function collectDiagnostics(adapters: Adapter[], ctx: RepoContext): Promis
 
 async function collectGraph(adapters: Adapter[], ctx: RepoContext): Promise<RepoGraph> {
   const artifacts = await collectArtifacts(adapters, ctx);
-  const artifactNodes = artifacts.map(artifactToNode);
+  const artifactNodes = uniqueNodesById(artifacts.map(artifactToNode));
   const graph: RepoGraph = { artifacts, nodes: artifactNodes, edges: [] };
   ctx.graph = graph;
 
@@ -191,6 +401,14 @@ function artifactToNode(artifact: Artifact): GraphNode {
       required: Boolean(artifact.required),
     },
   };
+}
+
+function uniqueNodesById(nodes: GraphNode[]): GraphNode[] {
+  const seen = new Map<string, GraphNode>();
+  for (const node of nodes) {
+    if (!seen.has(node.id)) seen.set(node.id, node);
+  }
+  return [...seen.values()];
 }
 
 function validateKernelContracts(ctx: RepoContext, rules: Rule[]): Diagnostic[] {

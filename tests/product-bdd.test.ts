@@ -1,14 +1,14 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, test } from "bun:test";
-import { runCheck, runInit } from "../src/core/runner";
+import { runAdd, runCheck, runInit } from "../src/core/runner";
 
 const config = `export default {
   adapters: ["product/manifest", "cucumber/bdd"],
   product: {
-    manifest: "eac.model.ts",
+    manifest: "product/manifest.ts",
     requireBddForAllActions: true,
     requireUnitForMutations: true,
   },
@@ -22,7 +22,7 @@ const config = `export default {
 const superBddConfig = `export default {
   adapters: ["product/superbdd"],
   product: {
-    manifest: "eac.model.ts",
+    manifest: "product/manifest.ts",
     requireBddForAllActions: true,
     requireUnitForMutations: true,
   },
@@ -175,13 +175,77 @@ Feature: Repository contract
 
     const result = await runInit({ root });
 
-    expect(result.actions.map((action) => `${action.action}:${action.path}`)).toContain("create:eac.model.ts");
+    expect(result.actions.map((action) => `${action.action}:${action.path}`)).toContain("create:product/manifest.ts");
     expect(result.actions.map((action) => `${action.action}:${action.path}`)).toContain(
       "create:features/repo-contract.feature",
     );
 
     const second = await runInit({ root });
     expect(second.actions.every((action) => action.action === "skip")).toBe(true);
+  });
+
+  test("add product/superbdd configures a clean repo, init scaffolds starters, and check fails until authored", async () => {
+    const root = tempRoot();
+
+    const add = await runAdd({ root, target: "product/superbdd" });
+
+    expect(add.targets).toEqual(["product/superbdd"]);
+    expect(add.actions.map((action) => `${action.action}:${action.path}`)).toEqual(["create:eac.config.ts"]);
+    expect(existsSync(join(root, "eac.config.ts"))).toBe(true);
+    expect(existsSync(join(root, "product", "manifest.ts"))).toBe(false);
+    expect(existsSync(join(root, "features", "repo-contract.feature"))).toBe(false);
+
+    const preInitCheck = await runCheck({ root });
+    expect(preInitCheck.diagnostics.map((diagnostic) => diagnostic.ruleId)).toContain(
+      "product/manifest-file-required",
+    );
+    expect(preInitCheck.diagnostics.map((diagnostic) => diagnostic.ruleId)).not.toContain(
+      "product/starter-placeholder",
+    );
+
+    const init = await runInit({ root });
+    expect(init.actions.map((action) => `${action.action}:${action.path}`)).toContain("create:product/manifest.ts");
+    expect(init.actions.map((action) => `${action.action}:${action.path}`)).toContain(
+      "create:features/repo-contract.feature",
+    );
+
+    const starterCheck = await runCheck({ root });
+    expect(starterCheck.diagnostics.map((diagnostic) => diagnostic.ruleId)).toContain("product/starter-placeholder");
+
+  });
+
+  test("add supports explicit multi-adapter selection", async () => {
+    const root = tempRoot();
+
+    const add = await runAdd({
+      root,
+      targets: [
+        "product/superbdd",
+        "architecture/mermaid",
+        "design/react",
+        "data/supabase",
+        "infra/terraform",
+        "deploy/cloudflare",
+      ],
+    });
+
+    expect(add.targets).toEqual([
+      "product/superbdd",
+      "architecture/mermaid",
+      "design/react",
+      "data/supabase",
+      "infra/terraform",
+      "deploy/cloudflare",
+    ]);
+    expect(add.actions.map((action) => `${action.action}:${action.path}`)).toEqual(["create:eac.config.ts"]);
+
+    const configContent = readFileSync(join(root, "eac.config.ts"), "utf8");
+    expect(configContent).toContain('"product/superbdd"');
+    expect(configContent).toContain('"architecture/mermaid"');
+    expect(configContent).toContain('"design/react"');
+    expect(configContent).toContain('"data/supabase"');
+    expect(configContent).toContain('"infra/terraform"');
+    expect(configContent).toContain('"deploy/cloudflare"');
   });
 });
 
@@ -196,7 +260,8 @@ async function fixture({
 }): Promise<string> {
   const root = tempRoot();
   write(join(root, "eac.config.ts"), configContent);
-  write(join(root, "eac.model.ts"), manifest);
+  await mkdir(join(root, "product"), { recursive: true });
+  write(join(root, "product", "manifest.ts"), manifest);
   await mkdir(join(root, "features"), { recursive: true });
   write(join(root, "features", "repo-contract.feature"), feature);
   return root;

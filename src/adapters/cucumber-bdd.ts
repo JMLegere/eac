@@ -526,15 +526,15 @@ function defaultFeatureTemplate(capabilityId: string, label: string, actionIds: 
   const scenarios = actionIds.length > 0 ? actionIds : ["run-check"];
   return `@capability.${capabilityId}
 Feature: ${label}
-  ${label} stays aligned with the repo-owned product contract.
+  TODO: Replace this starter feature with real product behavior.
 
 ${scenarios
   .map(
     (actionId) => `  @action.${actionId}
-  Scenario: ${sentenceCase(actionId)}
-    Given the repository contract is available
-    When ${actionId} is exercised
-    Then the behavior satisfies the product contract`,
+  Scenario: TODO replace ${sentenceCase(actionId)} with real behavior
+    Given TODO real preconditions are authored
+    When ${actionId} is exercised through the real product surface
+    Then TODO observable product behavior is specified`,
   )
   .join("\n\n")}
 `;

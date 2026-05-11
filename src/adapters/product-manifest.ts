@@ -13,7 +13,7 @@ import type {
 } from "../core/types";
 
 const KEBAB_CASE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const DEFAULT_MANIFEST_PATH = "eac.model.ts";
+const DEFAULT_MANIFEST_PATH = "product/manifest.ts";
 const DEFAULT_VERIFICATION_KINDS = [
   "bdd",
   "unit",
@@ -328,6 +328,8 @@ function validateProductModel(ctx: RepoContext, model: ProductModel, severity: S
   diagnostics.push(...validateUniqueIds(model.capabilities, "capability", model.manifestPath, severity));
   diagnostics.push(...validateUniqueIds(model.workflows, "workflow", model.manifestPath, severity));
 
+
+  diagnostics.push(...validateStarterPlaceholders(model, severity));
   for (const action of model.actions) {
     if (!KEBAB_CASE.test(action.id)) {
       diagnostics.push(
@@ -683,8 +685,8 @@ async function importManifest(
   const absolutePath = join(ctx.root, manifestPath);
 
   try {
-    const mtime = statSync(absolutePath).mtimeMs;
-    const moduleUrl = `${pathToFileURL(absolutePath).href}?mtime=${mtime}`;
+    const stat = statSync(absolutePath);
+    const moduleUrl = `${pathToFileURL(absolutePath).href}?mtime=${stat.mtimeMs}&size=${stat.size}`;
     const loaded = (await import(moduleUrl)) as Record<string, unknown>;
     return { module: loaded, diagnostics: [] };
   } catch (error) {
@@ -807,31 +809,73 @@ function defaultManifestTemplate(): string {
   return `export const actionCapabilities = {
   runCheck: {
     id: "run-check",
-    label: "Run strict EAC check",
+    label: "TODO: Replace with a real user-visible action",
     kind: "verification",
     actor: "developer",
-    surface: "CLI",
+    surface: "TODO",
     risk: "medium",
     auth: "none",
-    boundary: "eac check",
+    boundary: "TODO: describe the behavior boundary this action owns",
     workflow: null,
     verification: { required: ["bdd", "unit"] },
+    eacStarter: true,
   },
 } as const;
 
 export const productCapabilities = {
   repoContract: {
     id: "repo-contract",
-    label: "Repository contract",
+    label: "TODO: Replace with a real product capability",
     tag: "@capability.repo-contract",
     cucumberFeatures: ["features/repo-contract.feature"],
     requiredActions: ["run-check"],
     workflows: [],
+    eacStarter: true,
   },
 } as const;
 
 export const userActionWorkflows = {} as const;
 `;
+}
+
+function validateStarterPlaceholders(model: ProductModel, severity: Severity): Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+
+  for (const action of model.actions) {
+    if (action.raw.eacStarter === true) {
+      diagnostics.push(
+        diagnostic(
+          "product/starter-placeholder",
+          severity,
+          `action "${action.id}" is still marked as an EAC starter placeholder`,
+          {
+            path: model.manifestPath,
+            target: action.id,
+            hint: "replace the starter action with real product truth and remove eacStarter",
+          },
+        ),
+      );
+    }
+  }
+
+  for (const capability of model.capabilities) {
+    if (capability.raw.eacStarter === true) {
+      diagnostics.push(
+        diagnostic(
+          "product/starter-placeholder",
+          severity,
+          `capability "${capability.id}" is still marked as an EAC starter placeholder`,
+          {
+            path: model.manifestPath,
+            target: capability.id,
+            hint: "replace the starter capability with real product truth and remove eacStarter",
+          },
+        ),
+      );
+    }
+  }
+
+  return diagnostics;
 }
 
 function diagnostic(

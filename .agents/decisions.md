@@ -76,3 +76,22 @@ Use the following public adapter set for the `../main-website` seed validation p
 These are public contract adapters, not main-website-specific scripts. Internal/provider evidence stays behind the public adapter seam; all adapters should accept configurable paths/options with sensible defaults. `../main-website` is seed evidence for validation, not the adapter boundary.
 
 Environment checks are internal rule groups under provider adapters. GitHub Actions remains activation wiring, not a public adapter.
+
+## 2026-05-10 — EAC repo dogfood installs through add/init and fails until authored
+
+Do not use prefilled repo-local dogfood artifacts as proof of the fresh install story.
+
+The EAC repo was reinstalled through the same onboarding path users should run. The repo now has starter SuperBDD artifacts, but they are intentionally not valid product truth yet:
+
+```text
+mise use github:JMLegere/eac@latest
+eac add product/superbdd
+  -> eac.config.ts only
+eac init
+  -> product/manifest.ts
+  -> features/repo-contract.feature
+eac check
+  -> fails with product/starter-placeholder until starter placeholders are replaced with real product truth
+```
+
+`add` enables an EAC adapter bundle in config; `init` scaffolds missing files for enabled adapters. A passing `eac check` must require authored product truth, not generated placeholders.
