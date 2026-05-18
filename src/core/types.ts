@@ -13,6 +13,7 @@ export type Diagnostic = {
   };
   target?: string;
   hint?: string;
+  details?: string[];
   source: string;
 };
 
@@ -41,6 +42,7 @@ export type EacConfig = {
   product?: unknown;
   cucumber?: unknown;
   bdd?: unknown;
+  uiActions?: unknown;
   architecture?: unknown;
   design?: unknown;
   data?: unknown;

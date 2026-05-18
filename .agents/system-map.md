@@ -42,6 +42,10 @@ eac add product/superbdd
     -> product.manifest: "product/manifest.ts"
     -> cucumber.features: ["features/**/*.feature"]
   -> eac.config.ts
+eac doctor
+  -> advisory SuperBDD implementation guide
+    -> explains Capability -> Feature -> Scenario -> Step -> Action plus optional Workflows
+    -> recommends local `eac:doctor` and strict CI `eac:check` scripts
 eac init
   -> product/manifest.ts
   -> features/repo-contract.feature
@@ -89,6 +93,7 @@ Implemented public adapter set seeded by `../main-website`:
 ```text
 product/superbdd
   -> compiles Capability -> Feature -> Scenario -> Step -> Action evidence
+  -> doctor explains implementation model and check-script wiring when installed
 
 architecture/mermaid
   -> discovers and parses Mermaid source diagrams

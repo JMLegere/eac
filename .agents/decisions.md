@@ -95,3 +95,9 @@ eac check
 ```
 
 `add` enables an EAC adapter bundle in config; `init` scaffolds missing files for enabled adapters. A passing `eac check` must require authored product truth, not generated placeholders.
+
+## 2026-05-18 — SuperBDD doctor teaches the model after install
+
+When `product/superbdd` is installed, `eac doctor` emits an advisory info diagnostic explaining the SuperBDD model and implementation loop.
+
+Rationale: after `eac add product/superbdd`, users need to understand the concepts (capabilities, features, scenarios, steps, actions, optional workflows) and how to wire local advisory and strict CI check scripts before `eac check` can become useful. This stays adapter-owned so the kernel remains domain-agnostic.

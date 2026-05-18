@@ -30,3 +30,10 @@ Feature: EAC SuperBDD onboarding
     Given product/manifest.ts still contains eacStarter markers
     When the developer runs eac check
     Then the command fails with product/starter-placeholder
+
+  @action.explain-superbdd-doctor
+  Scenario: Explain the SuperBDD model after install
+    Given product/superbdd is enabled in eac.config.ts
+    When the developer runs eac doctor
+    Then the command explains capabilities, features, scenarios, steps, actions, and workflows
+    And it recommends advisory doctor and strict check scripts
